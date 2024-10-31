@@ -9,8 +9,6 @@
   - [2. Build the Project](#2-build-the-project)
   - [3. Run the Application](#3-run-the-application)
 - [Usage](#usage)
-  - [Selecting a Camera](#selecting-a-camera)
-  - [Controls](#controls)
 - [Packaging as a macOS Application](#packaging-as-a-macos-application)
 - [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
@@ -71,7 +69,7 @@ Upon running, the application will:
 1.	Detect all connected webcams.
 2.	If multiple cameras are found, prompt you to select one.
 3.	Display the live video feed in a resizable window.
-4.	Allow you to exit by pressing q or the Esc key.
+4.	Allow you to exit by pressing q or the <kbd>ESC</kbd> key.
 
 ## Usage
 Selecting a Camera
@@ -84,6 +82,88 @@ Multiple cameras detected:
 Enter the number corresponding to the camera you want to use:
 ```
 Type the desired number and press Enter to select the camera.
+You can exit the Program with <kbd>ESC</kbd>.
+
+## Packaging as a macOS Application
+To create a standard macOS .app bundle for Webcam Viewer, follow these steps:
+
+### 1. Build the Release Executable
+Ensure you’ve built the project in release mode:
+```bash
+cargo build --release
+```
+
+### 2. Create the Application Bundle Structure
+```bash
+mkdir -p WebcamViewer.app/Contents/MacOS
+mkdir -p WebcamViewer.app/Contents/Frameworks
+mkdir -p WebcamViewer.app/Contents/Resources
+```
+### 3. Copy the Executable
+```bash
+cp target/release/webcam_viewer WebcamViewer.app/Contents/MacOS/
+```
+
+### 4. Bundle OpenCV Libraries
+Identify and copy required OpenCV .dylib files:
+```bash
+otool -L target/release/webcam_viewer | grep opencv | awk '{print $1}' | while read lib; do
+    cp "$lib" WebcamViewer.app/Contents/Frameworks/
+done
+```
+
+### 5. Update Library Paths
+Use install_name_tool to adjust library paths within the executable:
+```bash
+cd WebcamViewer.app/Contents/MacOS
+for lib in ../Frameworks/*.dylib; do
+    lib_name=$(basename "$lib")
+    install_name_tool -change "$lib" "@executable_path/../Frameworks/$lib_name" webcam_viewer
+done
+```
+
+### 6. Create Info.plist
+Create and configure the Info.plist file:
+```xml
+cat <<EOF > WebcamViewer.app/Contents/Info.plist
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleExecutable</key>
+    <string>webcam_viewer</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.yourname.webcamviewer</string>
+    <key>CFBundleName</key>
+    <string>Webcam Viewer</string>
+    <key>CFBundleVersion</key>
+    <string>1.0</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>NSCameraUsageDescription</key>
+    <string>This app requires access to the camera to display the webcam feed.</string>
+</dict>
+</plist>
+EOF
+```
+
+### 7. (Optional) Add an Application Icon
+1.	Create an .icns File: Use an icon editor or an online converter to create an .icns file.
+2.	Copy the Icon: 
+```bash
+cp path_to_your_icon.icns WebcamViewer.app/Contents/Resources/
+```
+3.	Update Info.plist:
+Add the following keys within the <dict> section:
+```xml
+<key>CFBundleIconFile</key>
+<string>your_icon.icns</string>
+<key>CFBundleIconName</key>
+<string>your_icon</string>
+```
+
+### 8. Done
+you can run the app now 🎉. Grant camera access when prompted.
 
 ## Troubleshooting
 
